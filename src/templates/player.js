@@ -375,11 +375,35 @@ export const generatePlayerHtml = (config) => {
     }
 
     function terminateSession() {
-      if (scormAPI) {
-        scormAPI.LMSCommit("");
-        scormAPI.LMSFinish("");
+      var btn = document.querySelector('#summary-view .btn-continue');
+      if (btn) {
+        btn.innerHTML = "Session enregistrée ✓";
+        btn.style.background = "linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)";
+        btn.style.boxShadow = "0 10px 30px rgba(46, 204, 113, 0.4)";
       }
-      window.top.close();
+
+      if (scormAPI) {
+        try {
+          scormAPI.LMSCommit("");
+          scormAPI.LMSFinish("");
+        } catch(e) { console.error("SCORM Error:", e); }
+      }
+
+      // Petit délai pour laisser le temps au commit de finir
+      setTimeout(function() {
+        window.top.close();
+        
+        // Si la fenêtre est toujours ouverte après 1s, afficher un message de repli
+        setTimeout(function() {
+          var feedback = document.createElement('p');
+          feedback.innerHTML = "La fenêtre ne s'est pas fermée ?<br>Vous pouvez maintenant fermer cet onglet manuellement.";
+          feedback.style.color = "rgba(255,255,255,0.6)";
+          feedback.style.marginTop = "1.5rem";
+          feedback.style.fontSize = "0.9rem";
+          feedback.className = "fade-in";
+          document.querySelector('.summary-card').appendChild(feedback);
+        }, 1000);
+      }, 500);
     }
 
     window.onbeforeunload = function() {
