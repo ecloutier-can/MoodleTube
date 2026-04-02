@@ -28,7 +28,7 @@ export const generatePlayerHtml = (config) => {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
       background: rgba(15,15,15,0.95); display: none; flex-direction: column; 
       align-items: center; justify-content: center; transition: all 0.4s ease; 
-      z-index: 100; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
+      z-index: 1000; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
       padding: 2rem; box-sizing: border-box;
     }
     .overlay-content { text-align: center; max-width: 800px; width: 100%; }
@@ -64,16 +64,27 @@ export const generatePlayerHtml = (config) => {
     
     /* Markers */
     .marker-bar { 
-      position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; 
-      background: rgba(255,255,255,0.1); z-index: 50; display: flex; align-items: center;
+      position: absolute; bottom: 45px; left: 0; width: 100%; height: 10px; 
+      background: rgba(255,255,255,0.2); z-index: 500; display: flex; align-items: center;
+      pointer-events: none;
     }
     .marker { 
-      position: absolute; width: 10px; height: 10px; background: #fff; 
+      position: absolute; width: 12px; height: 12px; background: #fff; 
       border-radius: 50%; transform: translateX(-50%); cursor: help;
       box-shadow: 0 0 10px rgba(255,255,255,0.8); transition: transform 0.2s;
+      pointer-events: auto;
     }
     .marker:hover { transform: translateX(-50%) scale(1.5); }
     .marker.quiz { background: var(--yt-red, #ff0033); box-shadow: 0 0 10px rgba(255,0,51,0.8); }
+
+    /* Fullscreen Button */
+    .btn-fullscreen {
+      position: absolute; bottom: 10px; right: 10px; z-index: 600;
+      background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+      transition: all 0.2s; -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    }
+    .btn-fullscreen:hover { background: rgba(255,255,255,0.2); border-color: white; }
 
     /* Summary Styles */
     .summary-card {
@@ -111,12 +122,16 @@ export const generatePlayerHtml = (config) => {
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .fade-in { animation: fadeIn 0.5s ease-out; }
 
+    /* Hide native YT progress bar if possible or just avoid collision */
+    :fullscreen .video-container { width: 100vw; height: 100vh; max-width: none; border-radius: 0; }
+
   </style>
 </head>
 <body>
-  <div class="video-container">
+  <div id="video-wrapper" class="video-container">
     <div id="player"></div>
     <div id="marker-bar" class="marker-bar"></div>
+    <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Plein écran</button>
     <div id="overlay">
       <div id="quiz-view" class="overlay-content" style="display: none;">
         <div id="quiz-question" class="overlay-message">Question ?</div>
@@ -206,7 +221,7 @@ export const generatePlayerHtml = (config) => {
       initSCORM();
       player = new YT.Player('player', {
         videoId: youtubeVideoId,
-        playerVars: { 'rel': 0, 'modestbranding': 1, 'controls': 1 },
+        playerVars: { 'rel': 0, 'modestbranding': 1, 'controls': 1, 'fs': 0 },
         events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
       });
     }
@@ -265,17 +280,17 @@ export const generatePlayerHtml = (config) => {
       } else {
         document.getElementById('quiz-view').style.display = 'none';
         document.getElementById('message-view').style.display = 'block';
-        document.getElementById('overlay-msg').innerText = point.message;
+        document.getElementById('overlay-msg').innerHTML = point.message;
       }
     }
 
     function renderQuiz(point) {
       document.getElementById('message-view').style.display = 'none';
       document.getElementById('quiz-view').style.display = 'block';
-      document.getElementById('quiz-question').innerText = point.message;
+      document.getElementById('quiz-question').innerHTML = point.message;
       document.getElementById('quiz-next').style.display = 'none';
       document.getElementById('quiz-feedback').className = 'feedback';
-      document.getElementById('quiz-feedback').innerText = '';
+      document.getElementById('quiz-feedback').innerHTML = '';
       
       var optionsContainer = document.getElementById('quiz-options');
       optionsContainer.innerHTML = '';
@@ -283,7 +298,7 @@ export const generatePlayerHtml = (config) => {
       point.options.forEach(function(opt, idx) {
         var btn = document.createElement('button');
         btn.className = 'quiz-option';
-        btn.innerText = opt;
+        btn.innerHTML = opt;
         btn.onclick = function() { checkAnswer(idx, point.correct); };
         optionsContainer.appendChild(btn);
       });
@@ -296,13 +311,13 @@ export const generatePlayerHtml = (config) => {
       var feedback = document.getElementById('quiz-feedback');
       if (selectedIdx === correctIdx) {
         options[selectedIdx].classList.add('correct');
-        feedback.innerText = "Excellent ! C'est la bonne réponse.";
+        feedback.innerHTML = "Excellent ! C'est la bonne réponse.";
         feedback.classList.add('success');
         correctAnswersCount++;
       } else {
         options[selectedIdx].classList.add('wrong');
         options[correctIdx].classList.add('correct');
-        feedback.innerText = "Désolé, ce n'est pas tout à fait ça. Voici la correction.";
+        feedback.innerHTML = "Désolé, ce n'est pas tout à fait ça. Voici la correction.";
         feedback.classList.add('error');
       }
       
@@ -312,6 +327,17 @@ export const generatePlayerHtml = (config) => {
     function resumeVideo() {
       document.getElementById('overlay').style.display = 'none';
       player.playVideo();
+    }
+
+    function toggleFullscreen() {
+      var elem = document.getElementById('video-wrapper');
+      if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
     }
 
     function onPlayerStateChange(event) {
@@ -339,13 +365,12 @@ export const generatePlayerHtml = (config) => {
       document.getElementById('summary-view').style.display = 'block';
       document.getElementById('overlay').style.display = 'flex';
       
-      document.getElementById('stat-score').innerText = finalScore + '%';
-      document.getElementById('stat-answers').innerText = correctAnswersCount + '/' + totalQuizzes;
+      document.getElementById('stat-score').innerHTML = finalScore + '%';
+      document.getElementById('stat-answers').innerHTML = correctAnswersCount + '/' + totalQuizzes;
       
-      // Animation du score si possible ou simple affichage
       if (finalScore < 60) {
         document.getElementById('stat-score').style.color = '#e74c3c';
-        document.getElementById('summary-title').innerText = "Capsule complétée";
+        document.getElementById('summary-title').innerHTML = "Capsule complétée";
       }
     }
 
@@ -354,9 +379,7 @@ export const generatePlayerHtml = (config) => {
         scormAPI.LMSCommit("");
         scormAPI.LMSFinish("");
       }
-      // Tentative de fermeture de la fenêtre
       window.top.close();
-      // Si window.close() échoue (souvent bloqué), on peut rediriger ou laisser le LMS gérer
     }
 
     window.onbeforeunload = function() {
