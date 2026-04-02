@@ -345,15 +345,71 @@ const App = () => {
             </div>
             <div className="preview-video">
               {videoId ? (
-                <iframe 
-                  width="100%" 
-                  height="100%" 
-                  src={`https://www.youtube.com/embed/${videoId}`} 
-                  title="YouTube video player" 
-                  frameBorder="0" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                  allowFullScreen
-                ></iframe>
+                <>
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src={`https://www.youtube.com/embed/${videoId}`} 
+                    title="YouTube video player" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                  ></iframe>
+
+                  {/* --- LIVE PREVIEW OVERLAY --- */}
+                  <AnimatePresence>
+                    {(interactionMsg || quizOptions.some(opt => opt.trim() !== '')) && (
+                      <motion.div 
+                        className="live-preview-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <div className="live-preview-card">
+                          <h3>{interactionType === 'quiz' ? 'APERÇU QCM : ' : 'APERÇU MESSAGE : '}<br/>{interactionMsg || '...'}</h3>
+                          {interactionType === 'quiz' && (
+                            <div className="live-options">
+                              {quizOptions.map((opt, idx) => opt.trim() !== '' && (
+                                <div key={idx} className={`live-option ${correctAnswer === idx ? 'correct' : ''}`}>
+                                  <Circle 
+                                    size={14} 
+                                    fill={correctAnswer === idx ? "var(--yt-red)" : "transparent"} 
+                                    stroke={correctAnswer === idx ? "var(--yt-red)" : "white"}
+                                  />
+                                  {opt}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* --- LIVE STATUS BAR --- */}
+                  <div className="live-status-bar">
+                    <div className={`status-item ${strictMode ? 'active' : ''}`}>
+                      <ShieldAlert size={14} />
+                      <span>{strictMode ? 'Mode Strict' : 'Navigation Libre'}</span>
+                    </div>
+                    
+                    <div className="status-progress-mini">
+                      {interactions.map((int, i) => (
+                        <div 
+                          key={i} 
+                          className={`status-dot ${int.type === 'quiz' ? 'is-quiz' : ''}`}
+                          title={`${int.rawTime} - ${int.message}`}
+                          style={{ left: `${Math.min(95, Math.max(5, (i + 1) * (100 / (interactions.length + 1))))}%` }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="status-item active">
+                      <CheckCircle size={14} />
+                      <span>Objectif: {completionThreshold}%</span>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="empty-preview">
                   <Youtube size={80} opacity={0.1} />
