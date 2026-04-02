@@ -22,3 +22,5 @@ guide_youtube_*.pdf
 # App-specific ignores
 node_modules/
 dist/
+assets/
+dist-ssr/
