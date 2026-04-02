@@ -75,8 +75,42 @@ export const generatePlayerHtml = (config) => {
     .marker:hover { transform: translateX(-50%) scale(1.5); }
     .marker.quiz { background: var(--yt-red, #ff0033); box-shadow: 0 0 10px rgba(255,0,51,0.8); }
 
+    /* Summary Styles */
+    .summary-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 3rem;
+      text-align: center;
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .success-icon {
+      width: 80px; height: 80px; background: #2ecc71; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 2rem; font-size: 40px; color: white;
+      box-shadow: 0 0 30px rgba(46, 204, 113, 0.4);
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem; margin: 2.5rem 0;
+    }
+    .stat-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 1.5rem; border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .stat-value { font-size: 2rem; font-weight: 800; color: #fff; display: block; margin-bottom: 0.5rem; }
+    .stat-label { font-size: 0.9rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+    .final-score { color: #2ecc71; font-weight: 900; }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .fade-in { animation: fadeIn 0.5s ease-out; }
+
   </style>
 </head>
 <body>
@@ -93,6 +127,30 @@ export const generatePlayerHtml = (config) => {
       <div id="message-view" class="overlay-content" style="display: none;">
         <div id="overlay-msg" class="overlay-message">C'est le temps d'une pause !</div>
         <button class="btn-continue pulse" onclick="resumeVideo()">Continuer la lecture</button>
+      </div>
+      <div id="summary-view" class="overlay-content" style="display: none;">
+        <div class="summary-card">
+          <div class="success-icon">✓</div>
+          <h2 id="summary-title" class="overlay-message" style="margin-bottom: 0.5rem;">Félicitations !</h2>
+          <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem;">Vous avez terminé cette capsule d'apprentissage.</p>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span id="stat-score" class="stat-value final-score">--%</span>
+              <span class="stat-label">Score Final</span>
+            </div>
+            <div class="stat-item">
+              <span id="stat-answers" class="stat-value">0/0</span>
+              <span class="stat-label">Réponses</span>
+            </div>
+            <div class="stat-item">
+              <span id="stat-progress" class="stat-value">100%</span>
+              <span class="stat-label">Progression</span>
+            </div>
+          </div>
+
+          <button class="btn-continue" onclick="terminateSession()">Enregistrer et Quitter</button>
+        </div>
       </div>
     </div>
   </div>
@@ -111,6 +169,8 @@ export const generatePlayerHtml = (config) => {
     var isCompleted = false;
     var currentInteractionIndex = -1;
     var duration = 0;
+    var correctAnswersCount = 0;
+    var totalQuizzes = interactionPoints.filter(p => p.type === 'quiz').length;
 
     function findAPI(win) {
       var attempts = 0;
@@ -238,6 +298,7 @@ export const generatePlayerHtml = (config) => {
         options[selectedIdx].classList.add('correct');
         feedback.innerText = "Excellent ! C'est la bonne réponse.";
         feedback.classList.add('success');
+        correctAnswersCount++;
       } else {
         options[selectedIdx].classList.add('wrong');
         options[correctIdx].classList.add('correct');
@@ -260,18 +321,50 @@ export const generatePlayerHtml = (config) => {
     function validerAchevement() {
       if (isCompleted) return;
       isCompleted = true;
+      
+      var finalScore = totalQuizzes > 0 ? Math.round((correctAnswersCount / totalQuizzes) * 100) : 100;
+      
       if (scormAPI) {
         scormAPI.LMSSetValue("cmi.core.lesson_status", "completed");
-        scormAPI.LMSSetValue("cmi.core.score.raw", "100");
+        scormAPI.LMSSetValue("cmi.core.score.raw", finalScore.toString());
         scormAPI.LMSCommit("");
       }
+      
+      showSummary(finalScore);
+    }
+
+    function showSummary(finalScore) {
+      document.getElementById('quiz-view').style.display = 'none';
+      document.getElementById('message-view').style.display = 'none';
+      document.getElementById('summary-view').style.display = 'block';
+      document.getElementById('overlay').style.display = 'flex';
+      
+      document.getElementById('stat-score').innerText = finalScore + '%';
+      document.getElementById('stat-answers').innerText = correctAnswersCount + '/' + totalQuizzes;
+      
+      // Animation du score si possible ou simple affichage
+      if (finalScore < 60) {
+        document.getElementById('stat-score').style.color = '#e74c3c';
+        document.getElementById('summary-title').innerText = "Capsule complétée";
+      }
+    }
+
+    function terminateSession() {
+      if (scormAPI) {
+        scormAPI.LMSCommit("");
+        scormAPI.LMSFinish("");
+      }
+      // Tentative de fermeture de la fenêtre
+      window.top.close();
+      // Si window.close() échoue (souvent bloqué), on peut rediriger ou laisser le LMS gérer
     }
 
     window.onbeforeunload = function() {
       if (scormAPI) {
-        if (!isCompleted && saveProgress) scormAPI.LMSSetValue("cmi.suspend_data", maxTimeWatched.toString());
-        scormAPI.LMSCommit("");
-        scormAPI.LMSFinish("");
+        if (!isCompleted && saveProgress) {
+          scormAPI.LMSSetValue("cmi.suspend_data", maxTimeWatched.toString());
+        }
+        terminateSession();
       }
     };
   </script>
