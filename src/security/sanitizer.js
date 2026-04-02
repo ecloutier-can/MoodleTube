@@ -27,7 +27,10 @@ export const sanitizeConfig = (config) => {
   if (sanitized.interactions) {
     sanitized.interactions = sanitized.interactions.map(interaction => ({
       ...interaction,
-      message: escapeHtml(interaction.message)
+      type: interaction.type || 'message',
+      message: escapeHtml(interaction.message),
+      options: (interaction.options || []).map(opt => escapeHtml(opt)),
+      correct: typeof interaction.correct === 'number' ? interaction.correct : 0
     }));
   }
   return sanitized;

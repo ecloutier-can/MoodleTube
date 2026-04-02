@@ -12,7 +12,10 @@ import {
   ExternalLink,
   ShieldAlert,
   Info,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  ListChecks,
+  Circle
 } from 'lucide-react';
 import { extractVideoId } from './core/youtube';
 import { bundleScorm } from './core/bundler';
@@ -29,6 +32,9 @@ const App = () => {
   const [interactions, setInteractions] = useState([]);
   const [interactionTime, setInteractionTime] = useState('');
   const [interactionMsg, setInteractionMsg] = useState('');
+  const [interactionType, setInteractionType] = useState('text');
+  const [quizOptions, setQuizOptions] = useState(['', '']);
+  const [correctAnswer, setCorrectAnswer] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
@@ -39,9 +45,36 @@ const App = () => {
   const addInteraction = () => {
     if (!interactionTime || !interactionMsg) return;
     const timeInSeconds = parseTimeToSeconds(interactionTime);
-    setInteractions([...interactions, { time: timeInSeconds, rawTime: interactionTime, message: interactionMsg }]);
+    
+    const newInteraction = { 
+      time: timeInSeconds, 
+      rawTime: interactionTime, 
+      message: interactionMsg,
+      type: interactionType
+    };
+
+    if (interactionType === 'quiz') {
+      newInteraction.options = quizOptions.filter(opt => opt.trim() !== '');
+      newInteraction.correct = correctAnswer;
+    }
+
+    setInteractions([...interactions, newInteraction]);
     setInteractionTime('');
     setInteractionMsg('');
+    setQuizOptions(['', '']);
+    setCorrectAnswer(0);
+  };
+
+  const updateQuizOption = (index, value) => {
+    const newOptions = [...quizOptions];
+    newOptions[index] = value;
+    setQuizOptions(newOptions);
+  };
+
+  const addQuizOption = () => {
+    if (quizOptions.length < 4) {
+      setQuizOptions([...quizOptions, '']);
+    }
   };
 
   const removeInteraction = (index) => {
@@ -197,22 +230,73 @@ const App = () => {
               <PlayCircle size={20} className="accent-text" />
               <h2>Interactions Temporelles</h2>
             </div>
+
+            <div className="type-selector">
+              <button 
+                className={`type-btn ${interactionType === 'text' ? 'active' : ''}`}
+                onClick={() => setInteractionType('text')}
+              >
+                <MessageSquare size={16} /> Message
+              </button>
+              <button 
+                className={`type-btn ${interactionType === 'quiz' ? 'active' : ''}`}
+                onClick={() => setInteractionType('quiz')}
+              >
+                <ListChecks size={16} /> Question QCM
+              </button>
+            </div>
+
             <div className="interaction-inputs">
-              <input 
-                type="text" 
-                placeholder="02:30" 
-                className="time-input"
-                value={interactionTime}
-                onChange={(e) => setInteractionTime(e.target.value)}
-              />
-              <input 
-                type="text" 
-                placeholder="Message à afficher..." 
-                value={interactionMsg}
-                onChange={(e) => setInteractionMsg(e.target.value)}
-              />
-              <button className="btn-add" onClick={addInteraction}>
-                <Plus size={24} />
+              <div className="input-row">
+                <input 
+                  type="text" 
+                  placeholder="02:30" 
+                  className="time-input"
+                  value={interactionTime}
+                  onChange={(e) => setInteractionTime(e.target.value)}
+                />
+                <input 
+                  type="text" 
+                  placeholder={interactionType === 'text' ? "Message à afficher..." : "Votre question..."} 
+                  value={interactionMsg}
+                  onChange={(e) => setInteractionMsg(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+
+              {interactionType === 'quiz' && (
+                <motion.div 
+                  className="quiz-options-editor"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                >
+                  <label>Options de réponse (Cochez la bonne)</label>
+                  {quizOptions.map((opt, idx) => (
+                    <div key={idx} className="option-input-group">
+                      <input 
+                        type="radio" 
+                        name="correct-ans" 
+                        checked={correctAnswer === idx}
+                        onChange={() => setCorrectAnswer(idx)}
+                      />
+                      <input 
+                        type="text" 
+                        placeholder={`Option ${idx + 1}`}
+                        value={opt}
+                        onChange={(e) => updateQuizOption(idx, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  {quizOptions.length < 4 && (
+                    <button className="btn-small-add" onClick={addQuizOption}>
+                      + Ajouter une option
+                    </button>
+                  )}
+                </motion.div>
+              )}
+
+              <button className="btn-add-full" onClick={addInteraction}>
+                <Plus size={20} /> Ajouter l'interaction
               </button>
             </div>
 
@@ -222,13 +306,18 @@ const App = () => {
                   interactions.map((item, idx) => (
                     <motion.div 
                       key={idx}
-                      className="interaction-item"
+                      className={`interaction-item ${item.type === 'quiz' ? 'is-quiz' : ''}`}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                     >
-                      <span className="badge">{item.rawTime}</span>
-                      <span className="msg">{item.message}</span>
+                      <div className="item-main">
+                        <span className="badge">{item.rawTime}</span>
+                        <span className="type-badge">
+                          {item.type === 'quiz' ? <ListChecks size={12} /> : <MessageSquare size={12} />}
+                        </span>
+                        <span className="msg">{item.message}</span>
+                      </div>
                       <button className="btn-trash" onClick={() => removeInteraction(idx)}>
                         <Trash2 size={18} />
                       </button>
