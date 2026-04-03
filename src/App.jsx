@@ -126,11 +126,13 @@ const App = () => {
             >
               <h3>Guide d'utilisation</h3>
               <ul>
-                <li><strong>URL YouTube :</strong> Collez le lien de votre vidéo pour commencer.</li>
-                <li><strong>Strict Mode :</strong> Empêche l'étudiant d'avancer manuellement dans la vidéo.</li>
-                <li><strong>Suspend Data :</strong> Permet de reprendre là où l'étudiant s'est arrêté.</li>
-                <li><strong>Interactions :</strong> Ajoutez des pauses obligatoires avec des messages personnalisés.</li>
-                <li><strong>Générer :</strong> Obtenez un .zip prêt à être déposé dans Moodle.</li>
+                <li><strong>Vidéo & Titre :</strong> Collez le lien YouTube et personnalisez le titre de l'activité.</li>
+                <li><strong>Mode Strict :</strong> Empêche l'étudiant d'avancer manuellement pour garantir le visionnage.</li>
+                <li><strong>Résumé Statistique :</strong> Un écran de succès avec score et progression est généré à la fin.</li>
+                <li><strong>Interactions (Messages & QCM) :</strong> Ajoutez des pauses obligatoires avec messages ou questions à choix multiples.</li>
+                <li><strong>Aperçu en direct :</strong> Visualisez le rendu final de vos interactions directement sur la vidéo.</li>
+                <li><strong>Mémorisation :</strong> Autorise la reprise là où l'étudiant s'est arrêté (Suspend Data).</li>
+                <li><strong>Générer le SCORM :</strong> Obtenez un .zip prêt à être déposé dans Moodle (Compatible SCORM 1.2).</li>
               </ul>
             </motion.div>
           )}
